@@ -1,6 +1,6 @@
 name: mobsms_ohos
 description: HarmonyOS implementation of the MobTech mobsms Flutter plugin.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/zhangruiyu/mobsms_ohos
 
 environment:

@@ -6,7 +6,7 @@ import {
   MethodChannel,
   MethodResult
 } from '@ohos/flutter_ohos';
-import { common } from '@kit.AbilityKit';
+import { bundleManager, common } from '@kit.AbilityKit';
 import { ZztSDK } from '@zztsdk/zztcore';
 import { SmsSDK } from '@zztsdk/smshos';
 
@@ -14,6 +14,7 @@ export default class MobsmsOhosPlugin implements FlutterPlugin, MethodCallHandle
   private channel: MethodChannel | null = null;
   private context: common.Context | null = null;
   private initialized: boolean = false;
+  private privacyGranted: boolean = false;
 
   getUniqueClassName(): string {
     return 'MobsmsOhosPlugin';
@@ -30,31 +31,50 @@ export default class MobsmsOhosPlugin implements FlutterPlugin, MethodCallHandle
     this.channel = null;
     this.context = null;
     this.initialized = false;
+    this.privacyGranted = false;
   }
 
   async onMethodCall(call: MethodCall, result: MethodResult): Promise<void> {
     try {
-      if (call.method === 'initOhos') {
-        const appKey: string = call.args.get('appKey');
-        if (!this.context || !appKey) {
-          result.error('INIT_FAILED', '缺少应用上下文或 AppKey', null);
-          return;
-        }
-        ZztSDK.init(this.context, appKey, '');
-        this.initialized = true;
-        result.success(null);
-        return;
-      }
-
-      if (!this.initialized) {
-        result.error('NOT_INITIALIZED', '请先初始化鸿蒙短信 SDK', null);
-        return;
-      }
-
       if (call.method === 'uploadPrivacyStatus') {
-        ZztSDK.submitPolicyGrantResult(call.args.get('status') === true);
+        const granted: boolean = call.args.get('status') === true;
+        if (!granted) {
+          this.privacyGranted = false;
+        }
+        if (granted && !this.initialized) {
+          // 同步读取宿主配置，确保紧接着发送验证码时已经完成初始化。
+          const bundleInfo = bundleManager.getBundleInfoForSelfSync(
+            bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_HAP_MODULE |
+            bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_METADATA);
+          let appKey: string = '';
+          for (const moduleInfo of bundleInfo.hapModuleInfos) {
+            for (const metadata of moduleInfo.metadata) {
+              if (metadata.name === 'MobAppKey') {
+                appKey = metadata.value;
+              }
+            }
+          }
+          if (!this.context || !appKey) {
+            result.error('INIT_FAILED', '请在宿主 module.json5 的 metadata 中配置 MobAppKey', null);
+            return;
+          }
+          ZztSDK.init(this.context, appKey, '');
+          this.initialized = true;
+        }
+        if (this.initialized) {
+          ZztSDK.submitPolicyGrantResult(granted);
+        }
+        this.privacyGranted = granted;
         result.success(null);
-      } else if (call.method === 'getTextCode') {
+        return;
+      }
+
+      if (!this.initialized || !this.privacyGranted) {
+        result.error('NOT_INITIALIZED', '请在用户同意隐私政策后调用 Smssdk.submitPrivacyGrantResult(true)', null);
+        return;
+      }
+
+      if (call.method === 'getTextCode') {
         const country: string = call.args.get('zone');
         const phone: string = call.args.get('phoneNumber');
         const template: string = call.args.get('tempCode');
@@ -80,7 +100,7 @@ export default class MobsmsOhosPlugin implements FlutterPlugin, MethodCallHandle
         result.notImplemented();
       }
     } catch (error) {
-      if (call.method === 'initOhos' || call.method === 'uploadPrivacyStatus') {
+      if (call.method === 'uploadPrivacyStatus') {
         result.error('SMS_FAILED', String(error), null);
       } else {
         result.success({ 'err': { 'message': String(error) } });
