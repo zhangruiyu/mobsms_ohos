@@ -1,0 +1,10 @@
+{
+  "name": "mobsms_ohos",
+  "version": "0.1.0",
+  "main": "index.ets",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:./har/flutter.har",
+    "@zztsdk/zztcore": "2026.7.13",
+    "@zztsdk/smshos": "1.0.0"
+  }
+}

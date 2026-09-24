@@ -1,0 +1,10 @@
+.dart_tool/
+build/
+coverage/
+pubspec.lock
+ohos/BuildProfile.ets
+ohos/build/
+ohos/oh_modules/
+ohos/har/
+ohos/.hvigor/
+ohos/oh-package-lock.json5
