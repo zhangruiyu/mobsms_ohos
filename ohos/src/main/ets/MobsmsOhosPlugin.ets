@@ -47,7 +47,7 @@ export default class MobsmsOhosPlugin implements FlutterPlugin, MethodCallHandle
             bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_HAP_MODULE |
             bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_METADATA);
           let appKey: string = '';
-          for (const moduleInfo of bundleInfo.hapModuleInfos) {
+          for (const moduleInfo of bundleInfo.hapModulesInfo) {
             for (const metadata of moduleInfo.metadata) {
               if (metadata.name === 'MobAppKey') {
                 appKey = metadata.value;
